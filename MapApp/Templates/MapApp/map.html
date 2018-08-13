@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <!-- jQuery library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+          integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <style>
+        html {height: 96%}
+        body {height: 93%; margin: 0; padding: 0;}
+        h1 {text-align: center; text-shadow: firebrick;}
+        h3 {text-align: center; text-shadow: ghostwhite;}
+        #container {width: 100%; height: 100%}
+        #nav {
+            z-index: 100;
+            position: absolute;
+            padding: 5;
+            position: fixed;
+            top: 20%;
+            left: 0;
+            width: < fixed px >;
+            height: < fixed px >;
+        }
+        #map {height: 100%}
+    </style>
+    {% load static %}
+</head>
+<body>
+<div id="container">
+    <div id="nav">
+        <h4>Count: <span id="tweetspan"> 0 </span><h4>
+        <h3>KeyWord</h3>
+
+        <form id="listform" method="POST">{% csrf_token %}
+            <select name="KeyWords" class="form-control" id="KeyWords">
+                <option value="Sports" selected>Sports</option>
+                <option value="Game">Game</option>
+                <option value="Weather">Weather</option>
+                <option value="Food">Food</option>
+                <option value="Fun">Fun</option>
+                <option value="Traffic">Traffic</option>
+                <option value="Location">Location</option>
+                <option value="App">App</option>
+                <option value="Company">Company</option>
+            </select>
+            <br>
+            <div style="position:absolute;vertical-align:middle;text-align:center;">
+                <button type="submit" class="btn btn-primary" style="width:100px" onsubmit="initMap()">Search</button>
+            </div>
+        </form>
+
+    </div>
+    <h1>{{ app_name }}</h1>
+    <div id="map"></div>
+
+</div>
+<script>
+    var center = {lat: 20, lng: 150.644};
+    var map;
+    var markers = [];
+    var Ajaxs = [];
+    var currentAjax = null;
+    var currentInterval = null;
+    var num = 0;
+    var key_word;
+    var key_word_value;
+    var positive_marker = 'http://maps.google.com/mapfiles/ms/icons/green-dot.png';
+    var negative_marker = 'http://maps.google.com/mapfiles/ms/icons/red-dot.png';
+    var neutral_marker = 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+    var marker_icon = {positive: {icon: positive_marker},negative: {icon: negative_marker},neutral: {icon: neutral_marker}};
+    var marker_title = {positive: 'Positive Tweet', negative: 'Negative Tweet', neutral: 'Neutral Tweet'}
+    function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 2,
+            center: center,
+            mapTypeId: 'roadmap',
+            scaleControl: true,
+            streetViewControl: true,
+            rotateControl: true,
+            fullscreenControl: true
+        });
+        {#---Ajax---#}
+        $('#listform').on('submit', function (event) {
+            event.preventDefault();
+            if(currentInterval != null) {
+                clearInterval(currentInterval);
+            }
+            // clearAjaxs();
+            key_word = document.getElementById("KeyWords");
+            key_word_value = key_word.options[key_word.selectedIndex].value;
+            var getting = {
+                url: '/handle/',
+                type: 'POST',
+                timeout: 8000,
+                data: {Search: key_word_value, csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()},
+                success: function (json) {
+                    clearMarkers();
+                    num = parseInt(json.length.hits);
+                    for (var i = 0; i < num; i++) {
+                        var latlng = new google.maps.LatLng(parseFloat(json.coordinates[i].lat),
+                            parseFloat(json.coordinates[i].lng));
+                        var contentString = json.twitts[i];
+                        var sentiment = json.sentiments[i];
+                        var marker = new google.maps.Marker({
+                            map: map,
+                            position: latlng,
+                            animation: google.maps.Animation.DROP,
+                            title: marker_title[sentiment],
+                            icon: marker_icon[sentiment].icon
+                        });
+                        addInfo(marker, contentString);
+                        marker.setMap(map);
+                        markers.push(marker);
+                    }
+                    currentInterval = setInterval(polling, 1000);
+                }
+            };
+            currentAjax = $.ajax(getting);
+            Ajaxs.push(currentAjax);
+        });
+    }
+    function polling() {
+        console.log("Total Requests: " + Ajaxs.length);
+        if(Ajaxs.length > 2) {
+            clearAjaxs();
+        }
+        poll = {
+            url: '/polling/',
+            type:'GET',
+            data: {Search: key_word_value, Num: num, csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()},
+            success: function(json) {
+                num = parseInt(json.new_len);
+                console.log("old num: " + json.old_len);
+                console.log("new num: " + num);
+                $("#tweetspan").text(num);
+                for(var i = json.old_len; i < json.new_len; i++) {
+                    var latlng = new google.maps.LatLng(parseFloat(json.coordinates[i].lat),
+                        parseFloat(json.coordinates[i].lng));
+                    var contentString = json.twitts[i];
+                    var sentiment = json.sentiments[i];
+                    var marker = new google.maps.Marker({
+                        map: map,
+                        position: latlng,
+                        animation: google.maps.Animation.DROP,
+                        title: marker_title[sentiment],
+                        icon: marker_icon[sentiment].icon
+                    });
+                    addInfo(marker, contentString);
+                    marker.setMap(map);
+                    markers.push(marker);
+                }
+            }
+        };
+        currentAjax = $.ajax(poll);
+        Ajaxs.push(currentAjax);
+    }
+    function addInfo(marker, contentString) {
+        var infowindow = new google.maps.InfoWindow({
+            content: contentString,
+            maxWidth: 250
+        });
+        marker.addListener('click', function () {
+            infowindow.open(map, marker);
+        })
+    }
+    function clearMarkers() {
+        for (var i = 0; i < markers.length; i++) {
+          markers[i].setMap(null);
+        }
+        markers = [];
+      }
+    function clearAjaxs() {
+        for (var i = 0; i < Ajaxs.length; i++) {
+            Ajaxs[i].abort();
+        }
+        Ajaxs = [];
+    }
+</script>
+<script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD7GoPQ6Pos7-LzexaR9z6JmLuyDPigVDg&callback=initMap">
+</script>
+</body>
+</html>
