@@ -3,10 +3,10 @@ from tweepy import Stream
 from tweepy.streaming import StreamListener
 import boto3
 
-consumer_key = 'RP3ZNSHdjd0LH0RlMS3rhpSo1'
-consumer_secret = 'i78LTPwoIbWs7zn8Do5E2Eb2uZqOTWnW8LUH7WcFk1MyAnNR5b'
-access_token = '2509163336-HXCvtWS2pJ4Jo234RjFIh5ii4c8JX71FOPWqE21'
-access_token_secret = 'tMf1c9s0guQMU8gKhwJI31bl4EIphfRF5jBmBMxMcZ8q3'
+consumer_key = '******'
+consumer_secret = '******'
+access_token = '******'
+access_token_secret = '******'
 
 sqs = boto3.resource('sqs')
 queue = sqs.get_queue_by_name(QueueName='TwittTrends')
