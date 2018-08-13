@@ -6,7 +6,7 @@ import json
 sqs = boto3.resource('sqs')
 sns = boto3.client('sns')
 queue = sqs.get_queue_by_name(QueueName='TwittTrends')
-arn = 'arn:aws:sns:us-east-1:053461287737:Twitt'
+arn = '******'
 
 
 def worker(queue):
