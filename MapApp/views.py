@@ -63,7 +63,7 @@ def getIndex(message):
 def handle(es_request):
     message = es_request.POST.get('Search', None)
     keyword_index = getIndex(message)
-    domain = 'https://search-trends-pnoxxtizp4zrbmwnvgsifem74y.us-east-1.es.amazonaws.com/twittmap/_search?size=9999&pretty=true&q='
+    domain = 'https://******/twittmap/_search?size=9999&pretty=true&q='
     result = search(domain, keywords[keyword_index])
     print result
     
@@ -97,7 +97,7 @@ def polling(request):
     message = request.GET.get('Search', None)
     old_len = request.GET.get('Num', None)
     keyword_index = getIndex(message)
-    domain = 'https://search-trends-pnoxxtizp4zrbmwnvgsifem74y.us-east-1.es.amazonaws.com/twittmap/_search?size=9999&pretty=true&q='
+    domain = 'https://******/twittmap/_search?size=9999&pretty=true&q='
     result = search(domain, keywords[keyword_index])
     new_len = int(result['hits']['total'])
     c_data = [res['_source']['coordinates'] for res in result['hits']['hits']]
@@ -145,7 +145,7 @@ def handle_sns(request):
                 "coordinates": coordinate,
                 "sentiment": sentiment
             }
-            print requests.post('https://search-trends-pnoxxtizp4zrbmwnvgsifem74y.us-east-1.es.amazonaws.com/twittmap/data', json=upload_data)
+            print requests.post('https://******/twittmap/data', json=upload_data)
             context = {"message": "Notification"}
 
     return render(request, 'MapApp/map.html', context)
